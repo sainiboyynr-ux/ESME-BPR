@@ -445,11 +445,29 @@ function renderWeightTable() {
     <tr>
       <td><input class="tbl-input" value="${w.time}" oninput="bprData.weightObs[${i}].time=this.value" placeholder="00:00"></td>
       ${w.wts.map((wt, wi) => `
-        <td><input class="tbl-input" value="${wt}" oninput="bprData.weightObs[${i}].wts[${wi}]=this.value" style="width:40px"></td>
+        <td><input class="tbl-input" value="${wt}" oninput="updateWeight(${i},${wi},this.value)" style="width:40px"></td>
       `).join('')}
-      <td><input class="tbl-input" value="${w.avg}" oninput="bprData.weightObs[${i}].avg=this.value" style="width:50px"></td>
+      <td><input class="tbl-input avg-field" value="${w.avg}" readonly style="width:50px;font-weight:700;background:rgba(16,185,129,0.1);color:#10b981"></td>
     </tr>
   `).join('');
+}
+
+function updateWeight(row, col, val) {
+  bprData.weightObs[row].wts[col] = val;
+  // Calculate average of columns 1-10
+  const nums = bprData.weightObs[row].wts
+    .map(v => parseFloat(v))
+    .filter(n => !isNaN(n));
+  if (nums.length > 0) {
+    const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+    bprData.weightObs[row].avg = avg.toFixed(2);
+  } else {
+    bprData.weightObs[row].avg = '';
+  }
+  // Update the avg field in the DOM without re-rendering the entire table
+  const rows = document.getElementById('weight-body').querySelectorAll('tr');
+  const avgInput = rows[row].querySelector('.avg-field');
+  if (avgInput) avgInput.value = bprData.weightObs[row].avg;
 }
 
 function renderPackingTable() {
@@ -643,3 +661,4 @@ async function handleShare() {
     showModal('🔗', 'Share Link Generated', 'Please copy this link:\n\n' + shareUrl, () => {});
   });
 }
+
