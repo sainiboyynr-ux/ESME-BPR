@@ -204,6 +204,21 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .photo-viewer-close{padding:8px 20px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:8px;color:#fff;font-size:.9rem;cursor:pointer;transition:all .2s}
 .photo-viewer-close:hover{background:rgba(255,255,255,.25)}
 
+/* TOGGLE BUTTONS (OK/NOT OK, F/NF) */
+.toggle-cell{display:flex;align-items:center;gap:4px;justify-content:center}
+.toggle-btn{padding:5px 10px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .2s;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);white-space:nowrap}
+.toggle-btn:hover{transform:translateY(-1px)}
+.toggle-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.toggle-btn.toggle-ok{border-color:rgba(16,185,129,.3)}
+.toggle-btn.toggle-ok.active{background:#10b981;border-color:#10b981;color:#fff;box-shadow:0 2px 10px rgba(16,185,129,.4)}
+.toggle-btn.toggle-notok{border-color:rgba(239,68,68,.3)}
+.toggle-btn.toggle-notok.active{background:#ef4444;border-color:#ef4444;color:#fff;box-shadow:0 2px 10px rgba(239,68,68,.4)}
+.toggle-btn.toggle-f{border-color:rgba(239,68,68,.3)}
+.toggle-btn.toggle-f.active{background:#ef4444;border-color:#ef4444;color:#fff;box-shadow:0 2px 10px rgba(239,68,68,.4)}
+.toggle-btn.toggle-nf{border-color:rgba(16,185,129,.3)}
+.toggle-btn.toggle-nf.active{background:#10b981;border-color:#10b981;color:#fff;box-shadow:0 2px 10px rgba(16,185,129,.4)}
+.num-input{background:var(--surface2)!important;border:1.5px solid var(--border)!important;border-radius:6px!important}
+
 /* BULK STATUS */
 .bulk-status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding:0 24px 16px}
 .bs-group{display:flex;flex-direction:column;gap:5px}
@@ -524,6 +539,27 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     border-radius: 0 !important;
   }
   .photo-viewer-overlay { display: none !important; }
+
+  /* ── Toggle Buttons in Print ── */
+  .toggle-cell { justify-content: center !important; gap: 2pt !important; }
+  .toggle-btn {
+    padding: 1pt 4pt !important;
+    font-size: 7pt !important;
+    border-radius: 0 !important;
+    border: 0.5pt solid #999 !important;
+    background: #fff !important;
+    color: #999 !important;
+    box-shadow: none !important;
+  }
+  .toggle-btn.active {
+    border: 1pt solid #000 !important;
+    color: #000 !important;
+    font-weight: 900 !important;
+    background: #e8e8e8 !important;
+  }
+  .toggle-btn:not(.active) {
+    opacity: 0.3 !important;
+  }
 
   /* ── Force White on ALL Dark Backgrounds ── */
   .section-card,
