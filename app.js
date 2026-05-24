@@ -362,20 +362,81 @@ function renderCodingPacks() {
       <div class="coding-pack-title">${pack.title}</div>
       <div class="table-wrap">
         <table class="bpr-table">
-          <thead><tr><th>Item</th><th>Checked by Prod</th><th>Verified by IPQA</th></tr></thead>
+          <thead><tr><th>Item</th><th>Checked by Prod 📷</th><th>Verified by IPQA</th></tr></thead>
           <tbody>
-            ${pack.items.map((item, ii) => `
+            ${pack.items.map((item, ii) => {
+              const imgData = pack.vals[item.id].prodImg || '';
+              return `
               <tr>
                 <td style="text-align:left">${item.label}</td>
-                <td><input class="tbl-input" value="${pack.vals[item.id].prod}" oninput="bprData.codingPacks[${pi}].vals['${item.id}'].prod=this.value" id="cod-prod-${item.id}"></td>
+                <td>
+                  <div class="cam-cell">
+                    <input type="file" accept="image/*" capture="environment" 
+                           id="cam-${pi}-${item.id}" 
+                           class="cam-file-input"
+                           onchange="handleCamCapture(${pi},'${item.id}',this)" />
+                    <label for="cam-${pi}-${item.id}" class="cam-btn" title="Open Camera">
+                      📷 Capture
+                    </label>
+                    ${imgData 
+                      ? `<img src="${imgData}" class="cam-preview" onclick="viewPhoto('${pi}','${item.id}')" title="Click to view full" /><button class="cam-remove-btn" onclick="removeCamPhoto(${pi},'${item.id}')" title="Remove photo">✕</button>` 
+                      : '<span class="cam-placeholder">No photo</span>'}
+                  </div>
+                </td>
                 <td><input class="tbl-input" value="${pack.vals[item.id].ipqa}" oninput="bprData.codingPacks[${pi}].vals['${item.id}'].ipqa=this.value" id="cod-ipqa-${item.id}"></td>
-              </tr>
-            `).join('')}
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       </div>
     </div>
   `).join('');
+}
+
+function handleCamCapture(pi, itemId, input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Compress image to reduce storage size
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX_W = 800;
+      const scale = Math.min(1, MAX_W / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const compressed = canvas.toDataURL('image/jpeg', 0.6);
+      bprData.codingPacks[pi].vals[itemId].prodImg = compressed;
+      renderCodingPacks();
+      applyLocks();
+      showToast('success', '📷 Photo captured successfully!');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeCamPhoto(pi, itemId) {
+  bprData.codingPacks[pi].vals[itemId].prodImg = '';
+  renderCodingPacks();
+  applyLocks();
+}
+
+function viewPhoto(pi, itemId) {
+  const imgData = bprData.codingPacks[pi].vals[itemId].prodImg;
+  if (!imgData) return;
+  const viewer = document.createElement('div');
+  viewer.className = 'photo-viewer-overlay';
+  viewer.onclick = () => viewer.remove();
+  viewer.innerHTML = `
+    <div class="photo-viewer-card" onclick="event.stopPropagation()">
+      <img src="${imgData}" class="photo-viewer-img" />
+      <button class="photo-viewer-close" onclick="this.closest('.photo-viewer-overlay').remove()">✕ Close</button>
+    </div>`;
+  document.body.appendChild(viewer);
 }
 
 function renderWeightTable() {
