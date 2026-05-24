@@ -51,38 +51,38 @@ function defaultData() {
     codingPacks: [
       { id: 'primary', title: 'Primary Pack (Card)',
         items: [
-          {id:'cp_ok', label:'Coding on Primary (OK/Not OK)'},
-          {id:'text_ok', label:'Text Matters of Container/Tube (OK/Not OK)'}
+          {id:'cp_ok', label:'Coding on Primary (OK/Not OK)', type:'camera'},
+          {id:'text_ok', label:'Text Matters of Container/Tube (OK/Not OK)', type:'ok_notok'}
         ]
       },
       { id: 'secondary', title: 'Secondary Pack',
         items: [
-          {id:'cs_ok', label:'Coding of Card/Carton (OK/Not OK)'},
-          {id:'ill_cod', label:'Illegible Coding (F/NF)'},
-          {id:'w_cod', label:'Without Coding (F/NF)'},
-          {id:'text_card', label:'Text matters of Card/Carton (OK/Not OK)'},
-          {id:'seal_bl', label:'Sealing Quality of Blister (OK/Not OK)'},
-          {id:'burn_bl', label:'Burn Blister/Card (F/NF)'},
-          {id:'miss_comp', label:'Missed Component (F/NF)'}
+          {id:'cs_ok', label:'Coding of Card/Carton (OK/Not OK)', type:'camera'},
+          {id:'ill_cod', label:'Illegible Coding (F/NF)', type:'f_nf'},
+          {id:'w_cod', label:'Without Coding (F/NF)', type:'f_nf'},
+          {id:'text_card', label:'Text matters of Card/Carton (OK/Not OK)', type:'ok_notok'},
+          {id:'seal_bl', label:'Sealing Quality of Blister (OK/Not OK)', type:'ok_notok'},
+          {id:'burn_bl', label:'Burn Blister/Card (F/NF)', type:'f_nf'},
+          {id:'miss_comp', label:'Missed Component (F/NF)', type:'f_nf'}
         ]
       },
       { id: 'inner', title: 'Inner Box',
         items: [
-          {id:'ci_ok', label:'Coding of Inner Box (OK/Not OK)'},
-          {id:'text_inner', label:'Text Matters of Inner Box (OK/Not OK)'},
-          {id:'dam_inner', label:'Damage or Torn Inner Box (F/NF)'},
-          {id:'short_pack', label:'Short Packing (F/NF)'},
-          {id:'bopp_inner', label:'BOPP Taping on Inner Box (Bottom & Top) (OK/Not OK)'}
+          {id:'ci_ok', label:'Coding of Inner Box (OK/Not OK)', type:'camera'},
+          {id:'text_inner', label:'Text Matters of Inner Box (OK/Not OK)', type:'ok_notok'},
+          {id:'dam_inner', label:'Damage or Torn Inner Box (F/NF)', type:'f_nf'},
+          {id:'short_pack', label:'Short Packing (F/NF)', type:'f_nf'},
+          {id:'bopp_inner', label:'BOPP Taping on Inner Box (Bottom & Top) (OK/Not OK)', type:'ok_notok'}
         ]
       },
       { id: 'shipper', title: 'Shipper',
         items: [
-          {id:'csh_ok', label:'Coding of Shipper (OK/Not OK)'},
-          {id:'text_shipper', label:'Text Matters of Shipper (OK/Not OK)'},
-          {id:'dam_shipper', label:'Damage or Torn Shipper (F/NF)'},
-          {id:'pcs_filled', label:'No. of Pcs. Filled in the Shipper'},
-          {id:'short_pack_sh', label:'Short Packing (F/NF)'},
-          {id:'bopp_shipper', label:'BOPP Taping on Shipper (Bottom & Top) (OK/Not OK)'}
+          {id:'csh_ok', label:'Coding of Shipper (OK/Not OK)', type:'camera'},
+          {id:'text_shipper', label:'Text Matters of Shipper (OK/Not OK)', type:'ok_notok'},
+          {id:'dam_shipper', label:'Damage or Torn Shipper (F/NF)', type:'f_nf'},
+          {id:'pcs_filled', label:'No. of Pcs. Filled in the Shipper', type:'number'},
+          {id:'short_pack_sh', label:'Short Packing (F/NF)', type:'f_nf'},
+          {id:'bopp_shipper', label:'BOPP Taping on Shipper (Bottom & Top) (OK/Not OK)', type:'ok_notok'}
         ]
       }
     ].map(p => ({ ...p, vals: p.items.reduce((acc, i) => ({...acc, [i.id]: {prod: '', ipqa: ''}}), {}) })),
@@ -234,8 +234,6 @@ function applyLocks() {
   sections.forEach(sec => {
     const isCompleted = bprData.completed[sec.id];
     const canEditRole = sec.roles.includes(currentUser);
-    // Special rules: IPQA can edit coding/clearance verification even if Prod locked it, but let's say if section is "complete" by both, it's locked.
-    // For simplicity, if checked 'complete', lock for everyone except IPQA final checks.
     
     let locked = false;
     if (!canEditRole) locked = true;
@@ -252,7 +250,7 @@ function applyLocks() {
     // Disable inputs inside that tab panel if locked
     const panel = document.getElementById(`tab-${sections.indexOf(sec)}`);
     if (panel) {
-      panel.querySelectorAll('input, select, textarea, canvas').forEach(el => {
+      panel.querySelectorAll('input, select, textarea, canvas, button.toggle-btn').forEach(el => {
         if (el.type === 'checkbox' && el.id.startsWith('complete-')) return;
         
         // Fine-grained field disabling
@@ -357,40 +355,89 @@ function renderClearanceTable() {
 
 function renderCodingPacks() {
   const wrap = document.getElementById('coding-packs');
-  wrap.innerHTML = bprData.codingPacks.map((pack, pi) => `
+  wrap.innerHTML = bprData.codingPacks.map((pack, pi) => {
+    const rowsHtml = pack.items.map((item, ii) => {
+      const val = pack.vals[item.id];
+      const prodVal = val.prod || '';
+      const imgData = val.prodImg || '';
+      const itemType = item.type || 'text';
+      let prodCell = '';
+
+      if (itemType === 'camera') {
+        prodCell = `<div class="cam-cell">
+            <input type="file" accept="image/*" capture="environment" 
+                   id="cam-${pi}-${item.id}" 
+                   class="cam-file-input"
+                   onchange="handleCamCapture(${pi},'${item.id}',this)" />
+            <label for="cam-${pi}-${item.id}" class="cam-btn" title="Open Camera">
+              📷 Capture
+            </label>
+            ${imgData 
+              ? `<img src="${imgData}" class="cam-preview" onclick="viewPhoto('${pi}','${item.id}')" title="Click to view full" /><button class="cam-remove-btn" onclick="removeCamPhoto(${pi},'${item.id}')" title="Remove photo">✕</button>` 
+              : '<span class="cam-placeholder">No photo</span>'}
+          </div>`;
+
+      } else if (itemType === 'ok_notok') {
+        prodCell = `<div class="toggle-cell" id="toggle-prod-${pi}-${item.id}">
+            <button class="toggle-btn toggle-ok ${prodVal === 'OK' ? 'active' : ''}" 
+                    onclick="setCodingToggle(${pi},'${item.id}','prod','OK')" id="cod-prod-${item.id}">
+              ✓ OK
+            </button>
+            <button class="toggle-btn toggle-notok ${prodVal === 'NOT OK' ? 'active' : ''}" 
+                    onclick="setCodingToggle(${pi},'${item.id}','prod','NOT OK')">
+              ✗ Not OK
+            </button>
+          </div>`;
+
+      } else if (itemType === 'f_nf') {
+        prodCell = `<div class="toggle-cell" id="toggle-prod-${pi}-${item.id}">
+            <button class="toggle-btn toggle-f ${prodVal === 'F' ? 'active' : ''}" 
+                    onclick="setCodingToggle(${pi},'${item.id}','prod','F')" id="cod-prod-${item.id}">
+              ✗ F
+            </button>
+            <button class="toggle-btn toggle-nf ${prodVal === 'NF' ? 'active' : ''}" 
+                    onclick="setCodingToggle(${pi},'${item.id}','prod','NF')">
+              ✓ NF
+            </button>
+          </div>`;
+
+      } else if (itemType === 'number') {
+        prodCell = `<input type="number" class="tbl-input num-input" value="${prodVal}" 
+                   oninput="bprData.codingPacks[${pi}].vals['${item.id}'].prod=this.value" 
+                   id="cod-prod-${item.id}" placeholder="0" min="0" style="width:70px;text-align:center">`;
+
+      } else {
+        prodCell = `<input class="tbl-input" value="${prodVal}" 
+                   oninput="bprData.codingPacks[${pi}].vals['${item.id}'].prod=this.value" 
+                   id="cod-prod-${item.id}">`;
+      }
+
+      return `
+      <tr>
+        <td style="text-align:left">${item.label}</td>
+        <td>${prodCell}</td>
+        <td><input class="tbl-input" value="${val.ipqa}" oninput="bprData.codingPacks[${pi}].vals['${item.id}'].ipqa=this.value" id="cod-ipqa-${item.id}"></td>
+      </tr>`;
+    }).join('');
+
+    return `
     <div class="coding-pack">
       <div class="coding-pack-title">${pack.title}</div>
       <div class="table-wrap">
         <table class="bpr-table">
-          <thead><tr><th>Item</th><th>Checked by Prod 📷</th><th>Verified by IPQA</th></tr></thead>
-          <tbody>
-            ${pack.items.map((item, ii) => {
-              const imgData = pack.vals[item.id].prodImg || '';
-              return `
-              <tr>
-                <td style="text-align:left">${item.label}</td>
-                <td>
-                  <div class="cam-cell">
-                    <input type="file" accept="image/*" capture="environment" 
-                           id="cam-${pi}-${item.id}" 
-                           class="cam-file-input"
-                           onchange="handleCamCapture(${pi},'${item.id}',this)" />
-                    <label for="cam-${pi}-${item.id}" class="cam-btn" title="Open Camera">
-                      📷 Capture
-                    </label>
-                    ${imgData 
-                      ? `<img src="${imgData}" class="cam-preview" onclick="viewPhoto('${pi}','${item.id}')" title="Click to view full" /><button class="cam-remove-btn" onclick="removeCamPhoto(${pi},'${item.id}')" title="Remove photo">✕</button>` 
-                      : '<span class="cam-placeholder">No photo</span>'}
-                  </div>
-                </td>
-                <td><input class="tbl-input" value="${pack.vals[item.id].ipqa}" oninput="bprData.codingPacks[${pi}].vals['${item.id}'].ipqa=this.value" id="cod-ipqa-${item.id}"></td>
-              </tr>`;
-            }).join('')}
-          </tbody>
+          <thead><tr><th>Item</th><th>Checked by Prod</th><th>Verified by IPQA</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
         </table>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+}
+
+function setCodingToggle(pi, itemId, role, value) {
+  const current = bprData.codingPacks[pi].vals[itemId][role];
+  bprData.codingPacks[pi].vals[itemId][role] = (current === value) ? '' : value;
+  renderCodingPacks();
+  applyLocks();
 }
 
 function handleCamCapture(pi, itemId, input) {
@@ -472,8 +519,6 @@ function updateWeight(row, col, val) {
 
 function renderPackingTable() {
   const tableWrap = document.getElementById('packing-table-wrap');
-  // Simple table for IPQC Packing Checklist (Primary, Secondary, etc.)
-  // Just hardcode a few generic rows to match doc structure
   const rows = [
     { cat: 'Primary', items: ['Broken Container/Tube (F/NF)', 'Cap Fitment (OK/Not OK)', 'Sticker Pasting (OK/Not OK)'] },
     { cat: 'Secondary', items: ['Coding of Card/Carton (OK/Not OK)', 'Missed Component (F/NF)'] }
@@ -661,4 +706,3 @@ async function handleShare() {
     showModal('🔗', 'Share Link Generated', 'Please copy this link:\n\n' + shareUrl, () => {});
   });
 }
-
